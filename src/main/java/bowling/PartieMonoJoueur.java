@@ -13,6 +13,10 @@ public class PartieMonoJoueur {
 
 	private boolean lastWasStrike = false;
 	private boolean lastWasSpare = false;
+	private int multiplicateurStrikeSpare = 1;
+	private int nombreDeQuillesAbattuesSur1Tour = 0;
+	private int currentTour = 1;
+	private int score = 0;
 
 	
 	public PartieMonoJoueur() {
@@ -29,31 +33,54 @@ public class PartieMonoJoueur {
 		if (estTerminee()) {
 			throw new IllegalStateException("La partie est terminée");
 		}
+
+		nombreDeQuillesAbattuesSur1Tour += nombreDeQuillesAbattues;
+
+		if (lastWasSpare) {
+			// Ajouter les points du lancer au score du spare précédent
+			multiplicateurStrikeSpare = 2;
+			lastWasSpare = false;
+		}
+		if (lastWasStrike) {
+			// Ajouter les points du lancer au score du strike précédent
+			multiplicateurStrikeSpare = 2;
+		}
+
 		if (numeroProchainLancer() == 1) {
 			// Premier lancer du tour
 			if (nombreDeQuillesAbattues == 10) {
 				// Strike
+				lastWasStrike = true;
 				// Passer au tour suivant
+				nombreDeQuillesAbattues = nombreDeQuillesAbattues * multiplicateurStrikeSpare;
 				score(nombreDeQuillesAbattues);
+				finTour();
 				return false;
 			} else {
 				// Pas strike, le joueur peut lancer une deuxième fois
 				return true;
 			}
-		} else if (numeroProchainLancer() == 2 && nombreDeQuillesAbattues == 10) {
+		} else if (numeroProchainLancer() == 2 && nombreDeQuillesAbattuesSur1Tour == 10) {
 			// Deuxième lancer du tour et spare
+			lastWasSpare = true;
+			lastWasStrike = false;
 			// Passer au tour suivant
-			score(10);
+			nombreDeQuillesAbattues = nombreDeQuillesAbattues * multiplicateurStrikeSpare;
+			score(nombreDeQuillesAbattues);
+			finTour();
 			return false;
 		} else if (numeroProchainLancer() == 2) {
 			// Deuxième lancer du tour
+			lastWasStrike = false;
 			// Passer au tour suivant
 			score(nombreDeQuillesAbattues);
+			finTour();
 			return false;
 		} else if (numeroTourCourant() == 10 && numeroProchainLancer() == 3) {
 			// Troisième lancer (seulement au 10ème tour)
-			// Passer au tour suivant
+			// Finir le jeu
 			score(nombreDeQuillesAbattues);
+			estTerminee();
 			return false;
 		}
 		return true;
@@ -70,15 +97,27 @@ public class PartieMonoJoueur {
 		if (!estTerminee()) {
 			return 0;
 		}
+		score += nombreDeQuillesAbattues;
 		return nombreDeQuillesAbattues;
 		//throw new UnsupportedOperationException("Pas encore implémenté");
 	}
 
+	public void finTour() {
+		nombreDeQuillesAbattuesSur1Tour = 0;
+		multiplicateurStrikeSpare = 1;
+		currentTour++;
+		if (currentTour > 10) {
+			estTerminee();
+		}
+	}
 	/**
 	 * @return vrai si la partie est terminée pour ce joueur, faux sinon
 	 */
 	public boolean estTerminee() {
-		throw new UnsupportedOperationException("Pas encore implémenté");
+		//throw new UnsupportedOperationException("Pas encore implémenté");
+		nombreDeQuillesAbattuesSur1Tour = 0;
+		multiplicateurStrikeSpare = 1;
+		return true;
 	}
 
 
@@ -86,7 +125,10 @@ public class PartieMonoJoueur {
 	 * @return Le numéro du tour courant [1..10], ou 0 si le jeu est fini
 	 */
 	public int numeroTourCourant() {
-		throw new UnsupportedOperationException("Pas encore implémenté");
+		if (estTerminee()) {
+			return 0;
+		}
+		return currentTour;
 	}
 
 	/**
