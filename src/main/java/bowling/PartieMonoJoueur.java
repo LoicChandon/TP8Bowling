@@ -7,19 +7,15 @@ package bowling;
  */
 public class PartieMonoJoueur {
 
-	/**
-	 * Constructeur
-	 */
+	private Tour[] tours;
+	private int currentTour;
 
-	private boolean lastWasStrike = false;
-	private boolean lastWasSpare = false;
-	private int multiplicateurStrikeSpare = 1;
-	private int nombreDeQuillesAbattuesSur1Tour = 0;
-	private int currentTour = 1;
-	private int score = 0;
-
-	
 	public PartieMonoJoueur() {
+		this.tours = new Tour[10];
+		for (int i = 0; i < 10; i++) {
+			this.tours[i] = new Tour(i + 1);
+		}
+		this.currentTour = 1;
 	}
 
 	/**
@@ -27,99 +23,45 @@ public class PartieMonoJoueur {
 	 *
 	 * @param nombreDeQuillesAbattues le nombre de quilles abattues lors de ce lancer
 	 * @throws IllegalStateException si la partie est terminée
-	 * @return vrai si le joueur doit lancer à nouveau pour continuer son tour, faux sinon	
+	 * @return vrai si le joueur doit lancer à nouveau pour continuer son tour, faux sinon
 	 */
 	public boolean enregistreLancer(int nombreDeQuillesAbattues) {
 		if (estTerminee()) {
 			throw new IllegalStateException("La partie est terminée");
 		}
 
-		nombreDeQuillesAbattuesSur1Tour += nombreDeQuillesAbattues;
-
-		if (lastWasSpare) {
-			// Ajouter les points du lancer au score du spare précédent
-			multiplicateurStrikeSpare = 2;
-			lastWasSpare = false;
-		}
-		if (lastWasStrike) {
-			// Ajouter les points du lancer au score du strike précédent
-			multiplicateurStrikeSpare = 2;
+		Tour t = tours[currentTour - 1];
+		// First, apply this roll as a bonus to previous frames that still need bonuses
+		for (int i = 0; i < currentTour - 1; i++) {
+			tours[i].applyBonus(nombreDeQuillesAbattues);
 		}
 
-		if (numeroProchainLancer() == 1) {
-			// Premier lancer du tour
-			if (nombreDeQuillesAbattues == 10) {
-				// Strike
-				lastWasStrike = true;
-				// Passer au tour suivant
-				nombreDeQuillesAbattues = nombreDeQuillesAbattues * multiplicateurStrikeSpare;
-				score(nombreDeQuillesAbattues);
-				finTour();
-				return false;
-			} else {
-				// Pas strike, le joueur peut lancer une deuxième fois
-				return true;
-			}
-		} else if (numeroProchainLancer() == 2 && nombreDeQuillesAbattuesSur1Tour == 10) {
-			// Deuxième lancer du tour et spare
-			lastWasSpare = true;
-			lastWasStrike = false;
-			// Passer au tour suivant
-			nombreDeQuillesAbattues = nombreDeQuillesAbattues * multiplicateurStrikeSpare;
-			score(nombreDeQuillesAbattues);
-			finTour();
-			return false;
-		} else if (numeroProchainLancer() == 2) {
-			// Deuxième lancer du tour
-			lastWasStrike = false;
-			// Passer au tour suivant
-			score(nombreDeQuillesAbattues);
-			finTour();
-			return false;
-		} else if (numeroTourCourant() == 10 && numeroProchainLancer() == 3) {
-			// Troisième lancer (seulement au 10ème tour)
-			// Finir le jeu
-			score(nombreDeQuillesAbattues);
-			estTerminee();
-			return false;
+		boolean doitRelancer = t.enregistreLancer(nombreDeQuillesAbattues);
+		if (!doitRelancer) {
+			currentTour++;
 		}
-		return true;
-		//throw new UnsupportedOperationException("Pas encore implémenté");
+		return doitRelancer;
 	}
 
 	/**
-	 * Cette méthode donne le score du joueur.
-	 * Si la partie n'est pas terminée, on considère que les lancers restants
-	 * abattent 0 quille.
-	 * @return Le score du joueur
+	 * Calcule le score courant à partir des lancers enregistrés.
+	 * Si des lancers manquent pour calculer un bonus, ceux-ci sont considérés comme 0.
+	 * @return score courant
 	 */
-	public int score(int nombreDeQuillesAbattues) {
-		if (!estTerminee()) {
-			return 0;
+	public int score() {
+		int total = 0;
+		for (int i = 0; i < 10; i++) {
+			total += tours[i].getScore();
 		}
-		score += nombreDeQuillesAbattues;
-		return nombreDeQuillesAbattues;
-		//throw new UnsupportedOperationException("Pas encore implémenté");
+		return total;
 	}
 
-	public void finTour() {
-		nombreDeQuillesAbattuesSur1Tour = 0;
-		multiplicateurStrikeSpare = 1;
-		currentTour++;
-		if (currentTour > 10) {
-			estTerminee();
-		}
-	}
 	/**
 	 * @return vrai si la partie est terminée pour ce joueur, faux sinon
 	 */
 	public boolean estTerminee() {
-		//throw new UnsupportedOperationException("Pas encore implémenté");
-		nombreDeQuillesAbattuesSur1Tour = 0;
-		multiplicateurStrikeSpare = 1;
-		return true;
+		return currentTour > 10;
 	}
-
 
 	/**
 	 * @return Le numéro du tour courant [1..10], ou 0 si le jeu est fini
@@ -136,7 +78,10 @@ public class PartieMonoJoueur {
 	 *         est fini
 	 */
 	public int numeroProchainLancer() {
-		throw new UnsupportedOperationException("Pas encore implémenté");
+		if (estTerminee()) {
+			return 0;
+		}
+		return tours[currentTour - 1].getNumLancer();
 	}
 
 }
